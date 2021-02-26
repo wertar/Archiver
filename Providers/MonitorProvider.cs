@@ -25,6 +25,7 @@ namespace archiver.Providers
                     Thread.Sleep(30000);
                 }
             });
+            thread.IsBackground = true;
             thread.Start();
             return thread;
         }

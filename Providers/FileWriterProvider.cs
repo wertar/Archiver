@@ -10,16 +10,16 @@ namespace archiver
     public class FileWriterProvider
     {
         public static Thread StartWriting(IFileWriter fileWriter, IEnumerable<IQueue<ProcessingBlock>> queues)
-        {
-            var id = 0;
+        {            
             var thread = new Thread(() =>
             {
                 try
                 {
                     using (fileWriter)
                     {
+                        var id = 0;
                         while (true)
-                        {
+                        {                            
                             if (queues.All(q => !q.HasElements))
                             {
                                 if (queues.All(q => q.WriterFinished)) break;

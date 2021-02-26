@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GZipTest
@@ -32,16 +33,13 @@ namespace GZipTest
                         var archiveName = args[2];
 
                         var fileReader = new FileReader(fileToArchive);
-
                         var inpuQueues = QueueProvider.GetQueues(Configuration.CountOfCompressors, Configuration.QueueBufferLength);
-
-                        var reader = FileReaderProvider.StartReader(fileReader, inpuQueues, Configuration.BlockSize);
-
+                        var reader = FileReaderProvider.StartReader(fileReader, inpuQueues, Configuration.BlockSize);                        
                         var outputQueues = QueueProvider.GetQueues(Configuration.CountOfCompressors, Configuration.QueueBufferLength);
 
                         var compressors = Enumerable.Zip(inpuQueues, outputQueues, (a, b) => (inQueue: a, outQueue: b))
                             .Select(i => CompressorProvider.StartCompressor(i.inQueue, i.outQueue, CompressionLevel.Optimal))
-                            .ToArray();
+                            .ToArray();                                                
 
                         var fileWriter = new ArchiveFileWriter(new FileWriter(archiveName));
                         var writer = FileWriterProvider.StartWriting(fileWriter, outputQueues);
@@ -60,10 +58,9 @@ namespace GZipTest
                         var inpuCompressedQueues = QueueProvider.GetQueues(Configuration.CountOfDecompressors, Configuration.QueueBufferLength);
                         var archiveReader = FileReaderProvider.StartReader(new ArchiveFileReader(new FileReader(archiveName)), inpuCompressedQueues, Configuration.BlockSize + 100);
                         var outputDecompressedQueues = QueueProvider.GetQueues(Configuration.CountOfDecompressors, Configuration.QueueBufferLength);
-
-
+                        
                         var decompressors = Enumerable.Zip(inpuCompressedQueues, outputDecompressedQueues, (a, b) => (inQueue: a, outQueue: b))
-                            .Select(i => DecompressorProvider.StartDecompressor(i.inQueue, i.outQueue))
+                            .Select(i => DecompressorProvider.StartDecompressor(i.inQueue, i.outQueue, Configuration.BlockSize))
                             .ToArray();
 
                         var decompressedWriter = FileWriterProvider.StartWriting(new FileWriter(outputFileName), outputDecompressedQueues);
@@ -76,7 +73,7 @@ namespace GZipTest
 
                 default:
                     break;
-            }
+            }           
 
             return 0;
         }

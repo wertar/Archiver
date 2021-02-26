@@ -7,33 +7,33 @@ namespace archiver
 {
     public class DecompressorProvider
     {
-        public static Thread StartDecompressor(IQueue<ProcessingBlock> inQueue, IQueue<ProcessingBlock> outQueue)
+        public static Thread StartDecompressor(IQueue<ProcessingBlock> inQueue, IQueue<ProcessingBlock> outQueue, int sizeOfBlock)
         {
             var thread = new Thread(() =>
             {
                 try
                 {
 
-                
-                while (true)
-                {
-                    if (!inQueue.HasElements)
-                    {
-                        if (inQueue.WriterFinished) break;
-                        continue;
-                    }
 
-                    while (inQueue.AwaitableTryDequeue(out var processingBlock))
+                    while (true)
                     {
-                        var stream = new MemoryStream(processingBlock.Value);
-                        using (var zip = new GZipStream(stream, CompressionMode.Decompress))
+                        if (!inQueue.HasElements)
                         {
-                            var buffer = new byte[processingBlock.Value.Length * 2];
-                            var readCount = zip.Read(buffer, 0, buffer.Length);
-                            outQueue.EnqueWhenNoOverflow(new ProcessingBlock() { BlockId = processingBlock.BlockId, Value = buffer.GetSubArray(readCount) });
+                            if (inQueue.WriterFinished) break;
+                            continue;
+                        }
+
+                        while (inQueue.AwaitableTryDequeue(out var processingBlock))
+                        {
+                            var stream = new MemoryStream(processingBlock.Value);
+                            using (var zip = new GZipStream(stream, CompressionMode.Decompress))
+                            {
+                                var buffer = new byte[sizeOfBlock];
+                                var readCount = zip.Read(buffer, 0, buffer.Length);
+                                outQueue.EnqueWhenNoOverflow(new ProcessingBlock() { BlockId = processingBlock.BlockId, Value = (readCount != buffer.Length) ? buffer.GetSubArray(readCount) : buffer });
+                            }
                         }
                     }
-                }
                 }
                 catch (Exception e)
                 {
